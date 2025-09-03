@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"wheres-my-pizza/internal/config"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 )
 
 type DB struct {
@@ -14,7 +14,7 @@ type DB struct {
 }
 
 // Start initializes and returns a new DB instance with a single connection
-func Start(ctx context.Context, dbCfg *config.Postgres) (core.DB, error) {
+func Start(ctx context.Context, dbCfg *config.Postgres) (*DB, error) {
 	// Build DSN
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",

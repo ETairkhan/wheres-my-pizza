@@ -1,0 +1,52 @@
+services:
+  db: 
+    container_name: db
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - POSTGRES_DB=${POSTGRES_DB:-restaurant_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck: 
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-restaurant_db}"] 
+      interval: 5s 
+      timeout: 5s 
+      retries: 5
+    env_file:
+      - .config.yaml
+  
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./rabbitmq_definitions.json:/etc/rabbitmq/rabbitmq_definitions.json
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - .env
+
+  migrate:
+    container_name: migrate
+    image: migrate/migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./migrations/:/migrations
+    command: [
+      "-path", "/migrations/",
+      "-database",
+      "postgres://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DBNAME:-5432}?sslmode=disable",
+      "up"
+    ]
+    env_file:
+      - .env
