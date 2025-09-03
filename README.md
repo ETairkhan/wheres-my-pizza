@@ -1,2 +1,12 @@
 # wheres-my-pizza
 
+.env file:
+```bash
+
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=0000
+POSTGRES_DBNAME=wmp
+POSTGRES_SSLMODE=disable
+```
