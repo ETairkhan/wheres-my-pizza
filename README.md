@@ -10,3 +10,8 @@ POSTGRES_PASSWORD=0000
 POSTGRES_DBNAME=wmp
 POSTGRES_SSLMODE=disable
 ```
+
+exchange declaration or binding :
+```bash
+docker exec rabbitmq rabbitmqadmin declare exchange --vhost= name=customer_events  type=topic -u admin -p admin durable=true
+```
