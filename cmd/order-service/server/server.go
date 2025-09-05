@@ -11,6 +11,8 @@ import (
 	"wheres-my-pizza/pkg/db"
 	"wheres-my-pizza/pkg/logger"
 	"wheres-my-pizza/pkg/rabbitmq"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Server struct {
@@ -19,8 +21,8 @@ type Server struct {
 	config        *config.Config
 	logger        *logger.Logger
 	httpServer    *http.Server
-	dbPool        *db.Pool
-	rabbitMQ      *rabbitmq.RabbitMQ
+	dbPool        *pgxpool.Pool      // ← actual DB type
+	rabbitMQ      *rabbitmq.RabbitMQ // ← your wrapper with Channel inside
 }
 
 func NewServer(port, maxConcurrent int, cfg *config.Config, log *logger.Logger) *Server {
@@ -34,21 +36,20 @@ func NewServer(port, maxConcurrent int, cfg *config.Config, log *logger.Logger) 
 
 func (s *Server) Start() error {
 	// Connect to database
-	dbPool, err := db.ConnectDB(&s.config.Database, s.logger)
+	pool, err := db.ConnectDB(&s.config.Database, s.logger)
 	if err != nil {
 		return err
 	}
-	s.dbPool = dbPool
+	s.dbPool = pool
 
 	// Connect to RabbitMQ
-	rabbitMQ, err := rabbitmq.ConnectRabbitMQ(&s.config.RabbitMQ, s.logger)
+	rm, err := rabbitmq.ConnectRabbitMQ(&s.config.RabbitMQ, s.logger)
 	if err != nil {
 		return err
 	}
-	s.rabbitMQ = rabbitMQ
+	s.rabbitMQ = rm
 
-	// Create order handler
-	orderHandler := handler.NewOrderHandler(s.dbPool, rabbitMQ, s.logger)
+	orderHandler := handler.NewOrderHandler(s.dbPool, s.rabbitMQ.Channel, s.logger)
 
 	// Setup HTTP server
 	mux := http.NewServeMux()
@@ -67,11 +68,16 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
+	// Close MQ
 	if s.rabbitMQ != nil {
 		s.rabbitMQ.Close()
 	}
+	// Close DB pool
 	if s.dbPool != nil {
 		s.dbPool.Close()
 	}
-	return s.httpServer.Shutdown(ctx)
+	if s.httpServer != nil {
+		return s.httpServer.Shutdown(ctx)
+	}
+	return nil
 }

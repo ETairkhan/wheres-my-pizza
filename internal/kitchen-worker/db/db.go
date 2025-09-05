@@ -2,19 +2,33 @@ package db
 
 import (
 	"context"
-	"wheres-my-pizza/pkg/logger"
-
 	"github.com/jackc/pgx/v5/pgxpool"
+	"wheres-my-pizza/pkg/config"
+	"wheres-my-pizza/pkg/db"
+	"wheres-my-pizza/pkg/logger"
 )
 
 type KitchenDB struct {
 	DbPool *pgxpool.Pool
 	logger *logger.Logger
+	config *config.Config // Added config here to hold the global configuration
 }
 
-func NewKitchenDB(dbPool *pgxpool.Pool, logger *logger.Logger) *KitchenDB {
+// Update the ConnectDB function to use the KitchenDB config and logger
+func (w *KitchenDB) ConnectDB() error {
+	// Pass the config and logger from KitchenDB to db.ConnectDB
+	pool, err := db.ConnectDB(&w.config.Database, w.logger)
+	if err != nil {
+		return err
+	}
+
+	w.DbPool = pool
+	return nil
+}
+
+func NewKitchenDB(config *config.Config, logger *logger.Logger) *KitchenDB {
 	return &KitchenDB{
-		DbPool: dbPool,
+		config: config,
 		logger: logger,
 	}
 }
