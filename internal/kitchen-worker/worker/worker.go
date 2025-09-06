@@ -12,7 +12,7 @@ import (
 	"wheres-my-pizza/internal/kitchen-worker/worker_registration"
 
 	"wheres-my-pizza/pkg/config"
-	pkgdb "wheres-my-pizza/pkg/db" // <-- import the package that has ConnectDB
+	pkgdb "wheres-my-pizza/pkg/db"
 	"wheres-my-pizza/pkg/logger"
 	"wheres-my-pizza/pkg/models"
 	"wheres-my-pizza/pkg/rabbitmq"
