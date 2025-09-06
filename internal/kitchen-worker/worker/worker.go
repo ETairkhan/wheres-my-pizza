@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-	"wheres-my-pizza/internal/kitchen-worker/db"
 
+	kdb "wheres-my-pizza/internal/kitchen-worker/db"
 	"wheres-my-pizza/internal/kitchen-worker/processor"
 	"wheres-my-pizza/internal/kitchen-worker/status_update"
 	"wheres-my-pizza/internal/kitchen-worker/worker_registration"
+
 	"wheres-my-pizza/pkg/config"
+	pkgdb "wheres-my-pizza/pkg/db" // <-- import the package that has ConnectDB
 	"wheres-my-pizza/pkg/logger"
 	"wheres-my-pizza/pkg/models"
 	"wheres-my-pizza/pkg/rabbitmq"
@@ -28,7 +30,7 @@ type KitchenWorker struct {
 	logger            *logger.Logger
 	dbPool            *pgxpool.Pool
 	rabbitMQ          *rabbitmq.RabbitMQ
-	dbService         *db.KitchenDB
+	dbService         *kdb.KitchenDB
 	processor         *processor.OrderProcessor
 	statusService     *status_update.StatusUpdateService
 	registration      *worker_registration.WorkerRegistration
@@ -48,36 +50,34 @@ func NewKitchenWorker(workerName string, orderTypes []string, heartbeatInterval,
 }
 
 func (w *KitchenWorker) Start(ctx context.Context) error {
-	// Connect to database
-	dbPool, err := db.ConnectDB(&w.config.Database, w.logger)
+	// Connect to Postgres using pkg/db.ConnectDB
+	dbPool, err := pkgdb.ConnectDB(&w.config.Database, w.logger)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %v", err)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 	w.dbPool = dbPool
-	w.dbService = db.NewKitchenDB(dbPool, w.logger)
+	w.dbService = kdb.NewKitchenDB(dbPool, w.logger)
 
 	// Connect to RabbitMQ
-	rabbitMQ, err := rabbitmq.ConnectRabbitMQ(&w.config.RabbitMQ, w.logger)
+	rmq, err := rabbitmq.ConnectRabbitMQ(&w.config.RabbitMQ, w.logger)
 	if err != nil {
-		return fmt.Errorf("failed to connect to RabbitMQ: %v", err)
+		return fmt.Errorf("failed to connect to RabbitMQ: %w", err)
 	}
-	w.rabbitMQ = rabbitMQ
+	w.rabbitMQ = rmq
 
 	// Register worker
 	w.registration = worker_registration.NewWorkerRegistration(w.dbService, w.logger)
-	err = w.registration.RegisterWorker(w.workerName, "chef", w.orderTypes)
-	if err != nil {
-		return fmt.Errorf("failed to register worker: %v", err)
+	if err := w.registration.RegisterWorker(w.workerName, "chef", w.orderTypes); err != nil {
+		return fmt.Errorf("failed to register worker: %w", err)
 	}
 
 	// Initialize services
 	w.processor = processor.NewOrderProcessor(w.logger)
-	w.statusService = status_update.NewStatusUpdateService(rabbitMQ, w.logger)
+	w.statusService = status_update.NewStatusUpdateService(rmq, w.logger)
 
 	// Set prefetch
-	err = w.rabbitMQ.Channel.Qos(w.prefetch, 0, false)
-	if err != nil {
-		return fmt.Errorf("failed to set prefetch: %v", err)
+	if err := w.rabbitMQ.Channel.Qos(w.prefetch, 0, false); err != nil {
+		return fmt.Errorf("failed to set prefetch: %w", err)
 	}
 
 	// Start heartbeat
@@ -89,7 +89,7 @@ func (w *KitchenWorker) Start(ctx context.Context) error {
 
 func (w *KitchenWorker) consumeMessages(ctx context.Context) error {
 	// Consume messages from the queue
-	msgs, err := w.rabbitMQ.Channel.Consume(
+	messages, err := w.rabbitMQ.Channel.Consume(
 		"kitchen_queue", // queue
 		w.workerName,    // consumer
 		false,           // auto-ack
@@ -99,7 +99,7 @@ func (w *KitchenWorker) consumeMessages(ctx context.Context) error {
 		nil,             // args
 	)
 	if err != nil {
-		return fmt.Errorf("failed to start consuming messages: %v", err)
+		return fmt.Errorf("failed to start consuming messages: %w", err)
 	}
 
 	w.logger.Info("startup", "consuming_started", "Started consuming messages from kitchen_queue")
@@ -109,7 +109,7 @@ func (w *KitchenWorker) consumeMessages(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case msg, ok := <-msgs:
+		case msg, ok := <-messages:
 			if !ok {
 				return fmt.Errorf("message channel closed")
 			}
@@ -125,33 +125,45 @@ func (w *KitchenWorker) processMessage(ctx context.Context, msg amqp.Delivery) {
 	var orderMsg models.OrderMessage
 	if err := json.Unmarshal(msg.Body, &orderMsg); err != nil {
 		w.logger.Error(requestID, "message_parsing_failed", "Failed to parse message", err)
-		msg.Nack(false, true) // requeue the message
+		if err2 := msg.Nack(false, true); err2 != nil {
+			w.logger.Error(requestID, "nack_failed", "Failed to Nack message after parse error", err2)
+		}
 		return
 	}
 
 	// Check if the worker can handle this order type
 	if len(w.orderTypes) > 0 && !w.canHandleOrderType(orderMsg.OrderType) {
-		w.logger.Debug(requestID, "order_type_mismatch", fmt.Sprintf("Worker %s cannot handle order type %s", w.workerName, orderMsg.OrderType))
-		msg.Nack(false, true) // requeue the message
+		w.logger.Debug(requestID, "order_type_mismatch",
+			fmt.Sprintf("Worker %s cannot handle order type %s", w.workerName, orderMsg.OrderType))
+		if err := msg.Nack(false, true); err != nil {
+			w.logger.Error(requestID, "nack_failed", "Failed to Nack message (type mismatch)", err)
+		}
 		return
 	}
 
-	w.logger.Debug(requestID, "order_processing_started", fmt.Sprintf("Processing order %s", orderMsg.OrderNumber))
+	w.logger.Debug(requestID, "order_processing_started",
+		fmt.Sprintf("Processing order %s", orderMsg.OrderNumber))
 
 	// Process the order
-	if err := w.processOrder(ctx, requestID, &orderMsg); err != nil {
-		w.logger.Error(requestID, "order_processing_failed", fmt.Sprintf("Failed to process order %s", orderMsg.OrderNumber), err)
-		msg.Nack(false, true) // requeue the message
+	if err := w.processOrder(ctx, &orderMsg); err != nil {
+		w.logger.Error(requestID, "order_processing_failed",
+			fmt.Sprintf("Failed to process order %s", orderMsg.OrderNumber), err)
+		if err2 := msg.Nack(false, true); err2 != nil {
+			w.logger.Error(requestID, "nack_failed", "Failed to Nack message after processing error", err2)
+		}
 		return
 	}
 
 	// Acknowledge the message
-	msg.Ack(false)
-	w.logger.Debug(requestID, "order_completed", fmt.Sprintf("Completed processing order %s", orderMsg.OrderNumber))
+	if err := msg.Ack(false); err != nil {
+		w.logger.Error(requestID, "ack_failed", "Failed to Ack processed message", err)
+		return
+	}
+	w.logger.Debug(requestID, "order_completed",
+		fmt.Sprintf("Completed processing order %s", orderMsg.OrderNumber))
 }
 
 func (w *KitchenWorker) canHandleOrderType(orderType string) bool {
-	// Check if the worker can handle this specific order type
 	for _, t := range w.orderTypes {
 		if t == orderType {
 			return true
@@ -160,7 +172,7 @@ func (w *KitchenWorker) canHandleOrderType(orderType string) bool {
 	return false
 }
 
-func (w *KitchenWorker) processOrder(ctx context.Context, requestID string, orderMsg *models.OrderMessage) error {
+func (w *KitchenWorker) processOrder(ctx context.Context, orderMsg *models.OrderMessage) error {
 	// Get order ID from the database
 	orderID, err := w.dbService.GetOrderIDByNumber(ctx, orderMsg.OrderNumber)
 	if err != nil {
@@ -168,14 +180,12 @@ func (w *KitchenWorker) processOrder(ctx context.Context, requestID string, orde
 	}
 
 	// Update status to 'cooking'
-	err = w.dbService.UpdateOrderStatus(ctx, orderID, "cooking", w.workerName)
-	if err != nil {
+	if err := w.dbService.UpdateOrderStatus(ctx, orderID, "cooking", w.workerName); err != nil {
 		return err
 	}
 
 	// Log status change
-	err = w.dbService.LogOrderStatus(ctx, orderID, "cooking", w.workerName, "Order started cooking")
-	if err != nil {
+	if err := w.dbService.LogOrderStatus(ctx, orderID, "cooking", w.workerName, "Order started cooking"); err != nil {
 		return err
 	}
 
@@ -189,8 +199,7 @@ func (w *KitchenWorker) processOrder(ctx context.Context, requestID string, orde
 		Timestamp:           time.Now(),
 		EstimatedCompletion: estimatedCompletion,
 	}
-	err = w.statusService.PublishStatusUpdate(&statusUpdate)
-	if err != nil {
+	if err := w.statusService.PublishStatusUpdate(&statusUpdate); err != nil {
 		return err
 	}
 
@@ -198,14 +207,12 @@ func (w *KitchenWorker) processOrder(ctx context.Context, requestID string, orde
 	w.processor.SimulateCooking(orderMsg.OrderType)
 
 	// Update status to 'ready'
-	err = w.dbService.UpdateOrderStatusToReady(ctx, orderID, w.workerName)
-	if err != nil {
+	if err := w.dbService.UpdateOrderStatusToReady(ctx, orderID, w.workerName); err != nil {
 		return err
 	}
 
 	// Log status change again
-	err = w.dbService.LogOrderStatus(ctx, orderID, "ready", w.workerName, "Order is ready")
-	if err != nil {
+	if err := w.dbService.LogOrderStatus(ctx, orderID, "ready", w.workerName, "Order is ready"); err != nil {
 		return err
 	}
 
@@ -222,7 +229,6 @@ func (w *KitchenWorker) processOrder(ctx context.Context, requestID string, orde
 }
 
 func (w *KitchenWorker) getCookingTime(orderType string) time.Duration {
-	// Get the cooking time based on the order type
 	switch orderType {
 	case "dine_in":
 		return 8 * time.Second
@@ -236,7 +242,6 @@ func (w *KitchenWorker) getCookingTime(orderType string) time.Duration {
 }
 
 func (w *KitchenWorker) startHeartbeat(ctx context.Context) {
-	// Start sending heartbeat messages at intervals
 	ticker := time.NewTicker(time.Duration(w.heartbeatInterval) * time.Second)
 	defer ticker.Stop()
 
@@ -255,7 +260,6 @@ func (w *KitchenWorker) startHeartbeat(ctx context.Context) {
 }
 
 func (w *KitchenWorker) Stop() {
-	// Stop the worker and clean up resources
 	if w.rabbitMQ != nil {
 		w.rabbitMQ.Close()
 	}
@@ -263,7 +267,9 @@ func (w *KitchenWorker) Stop() {
 		w.dbPool.Close()
 	}
 	if w.registration != nil {
-		w.registration.MarkWorkerOffline(w.workerName)
+		if err := w.registration.MarkWorkerOffline(w.workerName); err != nil {
+			w.logger.Error("shutdown", "mark_offline_failed", "Failed to mark worker offline", err)
+		}
 	}
 	close(w.stopChan)
 }

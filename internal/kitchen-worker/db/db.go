@@ -2,40 +2,26 @@ package db
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5/pgxpool"
-	"wheres-my-pizza/pkg/config"
-	"wheres-my-pizza/pkg/db"
 	"wheres-my-pizza/pkg/logger"
 )
 
 type KitchenDB struct {
 	DbPool *pgxpool.Pool
 	logger *logger.Logger
-	config *config.Config // Added config here to hold the global configuration
 }
 
-// Update the ConnectDB function to use the KitchenDB config and logger
-func (w *KitchenDB) ConnectDB() error {
-	// Pass the config and logger from KitchenDB to db.ConnectDB
-	pool, err := db.ConnectDB(&w.config.Database, w.logger)
-	if err != nil {
-		return err
-	}
-
-	w.DbPool = pool
-	return nil
-}
-
-func NewKitchenDB(config *config.Config, logger *logger.Logger) *KitchenDB {
+func NewKitchenDB(dbPool *pgxpool.Pool, logger *logger.Logger) *KitchenDB {
 	return &KitchenDB{
-		config: config,
+		DbPool: dbPool,
 		logger: logger,
 	}
 }
 
 func (d *KitchenDB) GetOrderIDByNumber(ctx context.Context, orderNumber string) (int64, error) {
 	var orderID int64
-	err := d.DbPool.QueryRow(ctx, "SELECT id FROM orders WHERE number = $1", orderNumber).Scan(&orderID)
+	err := d.DbPool.QueryRow(ctx, `SELECT id FROM orders WHERE number = $1`, orderNumber).Scan(&orderID)
 	return orderID, err
 }
 
