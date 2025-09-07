@@ -1,4 +1,4 @@
-package broker_messager
+package broker_message
 
 import (
 	"context"

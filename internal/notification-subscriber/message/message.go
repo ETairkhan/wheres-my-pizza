@@ -3,8 +3,8 @@ package message
 import (
 	"encoding/json"
 
-	"wheres-my-pizza/pkg/logger"
-	"wheres-my-pizza/pkg/models"
+	"wheres-my-pizza/xpkg/logger"
+	"wheres-my-pizza/xpkg/models"
 )
 
 type MessageParser struct {

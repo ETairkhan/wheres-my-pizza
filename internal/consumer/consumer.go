@@ -4,19 +4,19 @@ import (
 	"context"
 	"log"
 	"time"
-	"wheres-my-pizza/internal/broker_messager"
+	"wheres-my-pizza/internal/broker_message"
 
 	"golang.org/x/sync/errgroup"
 )
 
 func main() {
-	conn, err := broker_messager.ConnectRabbitMQ("admin", "admin", "localhost:5672", "")
+	conn, err := broker_message.ConnectRabbitMQ("admin", "admin", "localhost:5672", "")
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
 
-	client, err := broker_messager.NewRabbitMQClient(conn)
+	client, err := broker_message.NewRabbitMQClient(conn)
 	if err != nil {
 		panic(err)
 	}

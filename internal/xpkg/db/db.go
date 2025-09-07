@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
-	"wheres-my-pizza/internal/config"
+	"wheres-my-pizza/internal/xpkg/config"
 
 	pgx "github.com/jackc/pgx/v5"
 )
