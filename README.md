@@ -1,6 +1,5 @@
 # wheres-my-pizza
 
-<<<<<<< HEAD
 .env file:
 ```bash
 
@@ -16,7 +15,6 @@ exchange declaration or binding :
 ```bash
 docker exec rabbitmq rabbitmqadmin declare exchange --vhost= name=customer_events  type=topic -u admin -p admin durable=true
 ```
-=======
 # Restaurant Order Management System
 
 A distributed system for managing restaurant orders with microservices architecture.
@@ -52,4 +50,3 @@ Run each service in a separate terminal:
 
 # Notification Subscriber
 ./restaurant-system --mode=notification-subscriber
->>>>>>> f46898d23e191683a483eb48ff58bcf286699d8d
