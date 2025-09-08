@@ -2,3 +2,5 @@
 ./where-is-my-pizza
 where-is-my-pizza
 config.yaml
+*.log
+request_id.txt

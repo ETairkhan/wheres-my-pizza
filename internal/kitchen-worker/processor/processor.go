@@ -3,7 +3,7 @@ package processor
 import (
 	"time"
 
-	"wheres-my-pizza/pkg/logger"
+	"wheres-my-pizza/internal/xpkg/logger"
 )
 
 type OrderProcessor struct {

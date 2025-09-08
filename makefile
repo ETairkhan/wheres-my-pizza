@@ -1,5 +1,5 @@
 build:
-	go build -o  where-is-my-pizza ./cmd/where-is-my-pizza/main.go
+	go build -o w ./cmd/wheres-is-my-pizza/main.go
 up:
 	docker-compose up --build
 down:

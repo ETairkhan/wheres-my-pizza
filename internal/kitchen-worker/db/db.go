@@ -2,9 +2,9 @@ package db
 
 import (
 	"context"
+	"wheres-my-pizza/internal/xpkg/logger"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"wheres-my-pizza/pkg/logger"
 )
 
 type KitchenDB struct {

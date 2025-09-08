@@ -5,11 +5,10 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
 	"wheres-my-pizza/internal/order-service/service"
 	"wheres-my-pizza/internal/order-service/validation"
-	"wheres-my-pizza/pkg/logger"
-	"wheres-my-pizza/pkg/models"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/xpkg/models"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rabbitmq/amqp091-go"
