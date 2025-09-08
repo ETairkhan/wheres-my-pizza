@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"wheres-my-pizza/internal/kitchen-worker/db"
-	"wheres-my-pizza/pkg/logger"
+	"wheres-my-pizza/internal/xpkg/logger"
 )
 
 type WorkerRegistration struct {

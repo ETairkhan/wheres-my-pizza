@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"wheres-my-pizza/pkg/logger"
-	"wheres-my-pizza/pkg/models"
-	"wheres-my-pizza/pkg/rabbitmq"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/xpkg/models"
+	rabbitmq "wheres-my-pizza/internal/broker_message"
 
 	"github.com/rabbitmq/amqp091-go"
 )

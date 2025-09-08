@@ -5,17 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	rabbitmq "wheres-my-pizza/internal/broker_message"
 
 	kdb "wheres-my-pizza/internal/kitchen-worker/db"
 	"wheres-my-pizza/internal/kitchen-worker/processor"
 	"wheres-my-pizza/internal/kitchen-worker/status_update"
 	"wheres-my-pizza/internal/kitchen-worker/worker_registration"
 
-	"wheres-my-pizza/pkg/config"
-	pkgdb "wheres-my-pizza/pkg/db"
-	"wheres-my-pizza/pkg/logger"
-	"wheres-my-pizza/pkg/models"
-	"wheres-my-pizza/pkg/rabbitmq"
+	"wheres-my-pizza/internal/xpkg/config"
+	pkgdb "wheres-my-pizza/internal/xpkg/db"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/xpkg/models"
+	//"wheres-my-pizza/internal/xpkg/rabbitmq"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	amqp "github.com/rabbitmq/amqp091-go"
