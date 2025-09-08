@@ -2,10 +2,12 @@ package brokermessage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 	"wheres-my-pizza/internal/kitchen/app/core"
+	"wheres-my-pizza/internal/kitchen/domain/dto"
 	"wheres-my-pizza/internal/xpkg/config"
 	"wheres-my-pizza/internal/xpkg/logger"
 
@@ -33,7 +35,7 @@ func New(
 	mylog logger.Logger,
 	prefetch int,
 ) (core.IRabbitMQ, error) {
-	r := RabbitMQ{
+	r := &RabbitMQ{
 		ctx:          ctx,
 		cfg:          rabbitmqCfg,
 		mylog:        mylog,
@@ -57,7 +59,6 @@ func (r *RabbitMQ) connect() error {
 		r.cfg.Port,
 		r.cfg.VHost,
 	))
-
 	if err != nil {
 		return err
 	}
@@ -80,14 +81,35 @@ func (r *RabbitMQ) connect() error {
 	return nil
 }
 
-func (r *RabbitMQ) IsAlive() error{
+func (r *RabbitMQ) IsAlive() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	// Check if both connection and channel are initialized and not closed
-	if r.conn == nil || r.conn.IsClosed(){
-		return err
+	if r.conn == nil || r.conn.IsClosed() {
+		return core.ErrMBConn
 	}
+
+	if r.ch == nil || r.ch.IsClosed() {
+		return core.ErrMBCh
+	}
+
+	return nil
+}
+
+func (r *RabbitMQ) Close() error {
+	if r.ch != nil && !r.ch.IsClosed() {
+		if err := r.ch.Close(); err != nil {
+			return fmt.Errorf("close rabbitmq channel: %v", err)
+		}
+	}
+
+	if r.conn != nil && r.conn.IsClosed() {
+		if err := r.conn.Close(); err != nil {
+			return fmt.Errorf("close rabbitmq connection: %v", err)
+		}
+	}
+	return nil
 }
 
 func (r *RabbitMQ) PushMessage(ctx context.Context, message dto.OrderMessage) error {
@@ -98,6 +120,17 @@ func (r *RabbitMQ) PushMessage(ctx context.Context, message dto.OrderMessage) er
 		go r.reconnect(r.ctx)
 		return fmt.Errorf("rabbitmq: connection lose")
 	}
+
+	routingKey := "order_update_messages"
+	body, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+	return r.ch.PublishWithContext(ctx, exchange, routingKey, false, false, amqp.Publishing{
+		ContentType:  "application/json",
+		DeliveryMode: amqp.Persistent,
+		Body:         body,
+	})
 }
 
 func (r *RabbitMQ) reconnect(ctx context.Context) {
@@ -110,25 +143,25 @@ func (r *RabbitMQ) reconnect(ctx context.Context) {
 	r.mu.Unlock()
 
 	t := time.NewTicker(time.Second * core.MBReconnInterval)
-	log := r.mylog.With("action", "rabbitmq-reconnecting" )
+	log := r.mylog.With("action", "rabbitmq-reconnecting")
 
 	for {
-		select{
-		case <- t.C:
+		select {
+		case <-t.C:
 			err := r.connect()
-			if err = nil {
+			if err == nil {
 				log.Info("rabbitmq reconnected!")
 				return
 			}
 			log.Info("rabbitmq failed to reconnect")
-		
-		case <- ctx.Done():
+
+		case <-ctx.Done():
 			t.Stop()
-			return	
+			return
 		}
 	}
 }
 
-func (r *RabbitMQ) ConsumeMessage(ctx context.Context, queue, workerName string) (<-chan amqp.Delivery, error){
-	return r.ch.ConsumeWithContext(ctx,queue, workerName, false,false , false ,false, nil )
+func (r *RabbitMQ) ConsumeMessage(ctx context.Context, queue, workerName string) (<-chan amqp.Delivery, error) {
+	return r.ch.ConsumeWithContext(ctx, queue, workerName, false, false, false, false, nil)
 }
