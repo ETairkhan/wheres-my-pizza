@@ -42,6 +42,24 @@ func main() {
 		help(fs)
 		return
 	}
+		// Remaining args after parsing --mode
+		remainingArgs := args[len(modeArgs):]
+
+		ctx := context.Background()
+		switch *mode {
+		case "kitchen-worker", "kw":
+			l := mylogger.With("service", "kitchen-worker")
+	
+			l.Action("kitchen_service_started").Info("Successfully started")
+			if err := kitchen.Execute(ctx, l, remainingArgs); err != nil {
+				l.Action("kitchen_service_failed").Error("Error in kitchen-service", err)
+	
+				if !errors.Is(err, core.ErrHelp) {
+					log.Fatalf("failed to execute kitchen-service: %s", err)
+				}
+			}
+			l.Action("kitchen_service_completed").Info("Successfully completed")
+	
 }
 
 func help(fs *flag.FlagSet) {
