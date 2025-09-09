@@ -1,5 +1,15 @@
 package kitchen 
 
+import (
+	"os/signal"
+	"syscall"
+	"context"
+	"flag"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/xpkg/config"
+	"wheres-my-pizza/internal/kitchen/app/core"
+	"wheres-my-pizza/internal/kitchen/aggregator/worker"
+)
 
 type params struct {
 	workerParams *core.WorkerParams
@@ -9,8 +19,8 @@ type params struct {
 
 // Execute starts kitchen service
 func Execute(ctx context.Context, mylog logger.Logger, args []string) error {
-	newCtx, cancle := signal.NotifyContext(ctx, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
-	defere cancel()
+	newCtx, cancel := signal.NotifyContext(ctx, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
 
 	params, err := parseParams(args)
 	if err != nil {
@@ -40,7 +50,12 @@ func Execute(ctx context.Context, mylog logger.Logger, args []string) error {
 
 // parseParams parse params from terminal
 func parseParams(args []string) (*params, error) {
-	
+	fs := flag.NewFlagSet("kitchen-service", flag.ContinueOnError)
+	showHelp := fs.Bool("help", false, "Show help")
+	configPath := fs.String("config-path", "config.yaml", "path for config yaml")
+
+	workerName := fs.String("worker-name", "", "Max concurrent requests")
+
 }
 
 // validateParams validates params
