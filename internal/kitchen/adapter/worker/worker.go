@@ -2,6 +2,8 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -10,6 +12,7 @@ import (
 	brokermessage "wheres-my-pizza/internal/kitchen/adapter/broker_message"
 	"wheres-my-pizza/internal/kitchen/adapter/db"
 	"wheres-my-pizza/internal/kitchen/app/core"
+	"wheres-my-pizza/internal/kitchen/domain/dto"
 	"wheres-my-pizza/internal/kitchen/domain/models"
 	"wheres-my-pizza/internal/xpkg/config"
 	"wheres-my-pizza/internal/xpkg/logger"
@@ -202,25 +205,25 @@ func (w *Worker) Stop() error {
 	return nil
 }
 
-func (w *Worker) work(jobsCh <-chan amqp.Delivery){
+func (w *Worker) work(jobsCh <-chan amqp.Delivery) {
 	log := w.mylog.Action("work")
-	ctx, cancel := context.WithTimeout(context.Background(), core.WaitTime * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), core.WaitTime*time.Second)
 	defer cancel()
 
-	if err := w.workerRepo.UpdateLastSeen(ctx, w.workerParams.WorkerName); err != nil{
+	if err := w.workerRepo.UpdateLastSeen(ctx, w.workerParams.WorkerName); err != nil {
 		w.mylog.Action("updateLastSeen").Error("Failed to update last seen and status field", err)
 	}
 
 	for {
-		select{
-			case msg, ok := <-jobsCh:
-			if !ok{
+		select {
+		case msg, ok := <-jobsCh:
+			if !ok {
 				log.Debug("main work is done")
-				return 
-			} 
+				return
+			}
 
-			// Process message 
-			if err, dlq := w.processMsg(msg); err != nil{
+			// Process message
+			if err, dlq := w.processMsg(msg); err != nil {
 				w.mylog.Action("processMsg").Error("Failed to process order", err)
 				if errors.Is(err, core.ErrDBConn) {
 					w.mylog.Warn("db conn lose, trying reconnecting")
@@ -232,12 +235,12 @@ func (w *Worker) work(jobsCh <-chan amqp.Delivery){
 					}
 				}
 				err = msg.Nack(false, dlq)
-				if !dlq{
+				if !dlq {
 					w.mylog.Action("Nack").Debug("send to dead letter queue")
 				}
 				if err != nil {
 					w.mylog.Action("Nack").Error("Failed to nack", err)
-					if err := w.mb.IsAlive(); err != nil{
+					if err := w.mb.IsAlive(); err != nil {
 						w.mylog.Action("Nack").Info("no point to live, app is shutting down")
 						w.notifyCancel()
 					}
@@ -245,13 +248,122 @@ func (w *Worker) work(jobsCh <-chan amqp.Delivery){
 			}
 
 		case <-w.ticker.C:
-			ctx, cancel := context.WithTimeout(context.Background(), core.WaitTime * time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), core.WaitTime*time.Second)
 			defer cancel()
 
-			if err := w.workerRepo.UpdateLastSeen(ctx, w.workerParams.WorkerName); err != nil{
-				w.mylog.Action("UpdateLastSeen").Error("Failed to update last seen field"), err
+			if err := w.workerRepo.UpdateLastSeen(ctx, w.workerParams.WorkerName); err != nil {
+				w.mylog.Action("UpdateLastSeen").Error("Failed to update last seen field", err)
 			}
 			w.mylog.Action("UpdateLastSeen").Info("Successfully updated last seen")
 		}
 	}
 }
+
+// should not to send dead letter queue or not, this what is mean bool argument that return
+func (w *Worker) processMsg(msg amqp.Delivery) (error, bool) {
+	order := dto.OrderRequest{}
+	err := json.Unmarshal(msg.Body, &order)
+	if err != nil {
+		return fmt.Errorf("unmarshal message: %v", err), false
+	}
+	w.mylog.Debug("new order received", "order-number", order.OrderNumber)
+	// Change status of order
+	ctx, cancel := context.WithTimeout(w.appCtx, time.Second*5)
+	defer cancel()
+
+	if err = w.orderRepo.SetStatusCooking(ctx, order.OrderNumber, w.workerParams.WorkerName); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			w.mylog.Warn("possible error: contain order that already cooked")
+			// order that already ready
+			return fmt.Errorf("possible duplicate"), false
+		}
+		// reconnecting to db
+		return core.ErrDBConn, true
+	}
+
+	workingDelay := core.SleepTime[order.Type]
+	orderMsg := dto.OrderMessage{
+		OrderNumber:         order.OrderNumber,
+		ChangedBy:           w.workerParams.WorkerName,
+		OldStatus:           "received",
+		NewStatus:           "cooking",
+		Timestamp:           time.Now().UTC().Format(time.RFC3339),
+		EstimatedCompletion: time.Now().Add(time.Duration(workingDelay) * time.Second).UTC().Format(time.RFC3339),
+	}
+
+	if err := w.mb.PushMessage(w.appCtx, orderMsg); err != nil {
+		w.mylog.Action("Publish").Error("Failed to publish message", err)
+	}
+
+	// Working delay
+	time.Sleep(time.Duration(workingDelay) * time.Second)
+
+	// Complete order
+	ctx, cancel = context.WithTimeout(w.appCtx, time.Second*5)
+	defer cancel()
+	err = w.orderRepo.SetStatusReady(ctx, order.OrderNumber, w.workerParams.WorkerName)
+	if err != nil {
+		return core.ErrDBConn, true
+	}
+
+	orderMsg.OldStatus = "cooking"
+	orderMsg.NewStatus = "ready"
+	orderMsg.Timestamp = time.Now().UTC().Format(time.RFC3339)
+	orderMsg.EstimatedCompletion = ""
+	if err := w.mb.PushMessage(w.appCtx, orderMsg); err != nil {
+		w.mylog.Action("mb_publish").Error("Failed to publish message", err)
+	}
+
+	// Acknowledged message
+	if err := msg.Ack(false); err != nil{
+		w.mylog.Action("Ack").Error("Failed to ack message", err)
+		return err, true
+	}
+	w.mylog.Debug("Ack message", "order", order)
+	return nil, true
+}
+
+func (w *Worker) startConsumers() chan amqp.Delivery{
+	channels := make([]<- chan amqp.Delivery, 0 , len(core.AllowedOrderTypes))
+	for _, orderType := range w.workerParams.OrderTypes{
+		messageBus, err := w.mb.ConsumeMessage(w.appCtx, orderType, "")
+		if err != nil {
+			w.mylog.Action("consume_restart_failed").Error("Failed to re-consume", err)
+			continue
+		}
+		channels = append(channels, messageBus)
+	}
+	return w.fanIn(channels...)
+}
+
+// fanIn merges multiple channels into one channel.
+
+func (w *Worker) fanIn(channels ...<-chan amqp.Delivery) chan amqp.Delivery{
+	out := make(chan amqp.Delivery, len(channels) * w.workerParams.Prefetch)
+
+	w.wg.Add(len(channels))
+
+	// Start a goroutine for each channel to handle the message consumption.
+	for _, ch := range channels{
+		go func(ch <-chan amqp.Delivery){
+			defer w.wg.Done()
+			for {
+				select {
+				case <-w.ctx.Done():
+					w.mylog.Debug("ctx done fanIn is done")
+					return
+				case msg := <-ch:
+					out <- msg
+				}
+			}
+		}(ch)
+	}
+
+	// Close the output channel once all consumers have finished 
+	go func(){
+		w.wg.Wait()
+		close(out)
+	}()
+	return out
+}
+
