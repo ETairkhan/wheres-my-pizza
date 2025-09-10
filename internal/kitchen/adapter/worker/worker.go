@@ -6,7 +6,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"wheres-my-pizza/internal/kitchen/adapter/brokermessage"
+
+	brokermessage "wheres-my-pizza/internal/kitchen/adapter/broker_message"
 	"wheres-my-pizza/internal/kitchen/adapter/db"
 	"wheres-my-pizza/internal/kitchen/app/core"
 	"wheres-my-pizza/internal/kitchen/domain/models"
@@ -14,6 +15,7 @@ import (
 	"wheres-my-pizza/internal/xpkg/logger"
 
 	"github.com/jackc/pgx/v5"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const (
@@ -125,7 +127,7 @@ func (w *Worker) validateWorker() error {
 		}
 	} else {
 		if worker.Status == online {
-			return fmt.Erorrf("worker is online right now")
+			return fmt.Errorf("worker is online right now")
 		}
 		if worker.Type != typesToStr {
 			mylog.Warn("worker have different type, updating type")
@@ -157,4 +159,99 @@ func (w *Worker) initializeRabbitMQ() error {
 	}
 	w.mb = mb
 	return nil
+}
+
+func (w *Worker) Stop() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	w.mylog.Action("graceful_shutdown_started").Info("Shutting down")
+
+	// Stop the ticker and cancel context
+	w.ticker.Stop()
+
+	// Wait for all workers to finish
+	w.wg.Wait()
+
+	ctx, cancel := context.WithTimeout(w.appCtx, core.WaitTime*time.Second)
+	defer cancel()
+
+	if err := w.workerRepo.SetOffline(ctx, w.workerParams.WorkerName); err != nil {
+		w.mylog.Action("set_worker_status_offline_failed").Error("Failed to set worker status to 'offline'", err)
+		return err
+	}
+	w.mylog.Action("set_worker_status_offline_completed").Info("Successfully set worker status to 'offline'")
+
+	if w.db != nil {
+		if err := w.db.Close(); err != nil {
+			w.mylog.Action("db_close_failed").Error("failed to close database", err)
+			return fmt.Errorf("db close %w", err)
+		}
+		w.mylog.Action("db_closed").Info("Database closed")
+	}
+
+	if w.mb != nil {
+		if err := w.mb.Close(); err != nil {
+			w.mylog.Action("mb_close_failed").Error("Failed to close message broker", err)
+			return fmt.Errorf("mb close: %w", err)
+		}
+		w.mylog.Action("mb_closed").Info("Message broker closed")
+	}
+
+	w.mylog.Action("graceful_shutdown_completed").Info("Successfully shutted down")
+	return nil
+}
+
+func (w *Worker) work(jobsCh <-chan amqp.Delivery){
+	log := w.mylog.Action("work")
+	ctx, cancel := context.WithTimeout(context.Background(), core.WaitTime * time.Second)
+	defer cancel()
+
+	if err := w.workerRepo.UpdateLastSeen(ctx, w.workerParams.WorkerName); err != nil{
+		w.mylog.Action("updateLastSeen").Error("Failed to update last seen and status field", err)
+	}
+
+	for {
+		select{
+			case msg, ok := <-jobsCh:
+			if !ok{
+				log.Debug("main work is done")
+				return 
+			} 
+
+			// Process message 
+			if err, dlq := w.processMsg(msg); err != nil{
+				w.mylog.Action("processMsg").Error("Failed to process order", err)
+				if errors.Is(err, core.ErrDBConn) {
+					w.mylog.Warn("db conn lose, trying reconnecting")
+					// reconnecting (10 attempts)
+					err := w.db.Reconnect()
+					if err != nil {
+						w.mylog.Warn("reconnecting failed, app is shutting down")
+						w.notifyCancel()
+					}
+				}
+				err = msg.Nack(false, dlq)
+				if !dlq{
+					w.mylog.Action("Nack").Debug("send to dead letter queue")
+				}
+				if err != nil {
+					w.mylog.Action("Nack").Error("Failed to nack", err)
+					if err := w.mb.IsAlive(); err != nil{
+						w.mylog.Action("Nack").Info("no point to live, app is shutting down")
+						w.notifyCancel()
+					}
+				}
+			}
+
+		case <-w.ticker.C:
+			ctx, cancel := context.WithTimeout(context.Background(), core.WaitTime * time.Second)
+			defer cancel()
+
+			if err := w.workerRepo.UpdateLastSeen(ctx, w.workerParams.WorkerName); err != nil{
+				w.mylog.Action("UpdateLastSeen").Error("Failed to update last seen field"), err
+			}
+			w.mylog.Action("UpdateLastSeen").Info("Successfully updated last seen")
+		}
+	}
 }

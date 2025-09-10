@@ -2,7 +2,7 @@ package core
 
 import (
 	"context"
-	"wheres-my-pizza/internal/xpkg/models"
+	"wheres-my-pizza/internal/kitchen/domain/models"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -22,12 +22,11 @@ type IOrderRepo interface {
 	SetStatusCancelled(ctx context.Context, orderNumber string) error
 }
 
-
-type IWorkerRepo interface{
+type IWorkerRepo interface {
 	Get(ctx context.Context, name string) (models.Worker, error)
 	Create(ctx context.Context, w models.Worker) (string, error)
 	SetOnline(ctx context.Context, name string) error
 	SetOffline(ctx context.Context, name string) error
 	UpdateLastSeen(ctx context.Context, name string) error
-	UpdateType(ctx context.Context, name, newType string) error 
+	UpdateType(ctx context.Context, name, newType string) error
 }
