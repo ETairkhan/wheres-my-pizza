@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"wheres-my-pizza/internal/kitchen/adapter/workers"
 	"wheres-my-pizza/internal/kitchen/app/core"
 	"wheres-my-pizza/internal/xpkg/config"
 	"wheres-my-pizza/internal/xpkg/logger"
@@ -109,7 +110,7 @@ func validateParams(params *params) error {
 		validateOrderTypes := make([]string, 0)
 		for _, orderType := range workerParams.OrderTypes {
 			orderType = strings.TrimSpace(orderType)
-			if !core.AllowedOrderTypes[orderType]{
+			if !core.AllowedOrderTypes[orderType] {
 				return fmt.Errorf("unknown order type: %s", orderType)
 			}
 			validateOrderTypes = append(validateOrderTypes, orderType)
@@ -117,11 +118,11 @@ func validateParams(params *params) error {
 		workerParams.OrderTypes = validateOrderTypes
 	}
 
-	if workerParams.HeartbeatInterval <= {
+	if workerParams.HeartbeatInterval <= 0 {
 		return fmt.Errorf("heartbeat-interval cannot be less or equal zero: %d", workerParams.HeartbeatInterval)
 	}
 
-	if workerParams.Prefetch <= {
+	if workerParams.Prefetch <= 0 {
 		return fmt.Errorf("prefetch cannot be less or equal zero: %d", workerParams.Prefetch)
 	}
 

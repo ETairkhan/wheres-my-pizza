@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+	"wheres-my-pizza/internal/kitchen"
+	"wheres-my-pizza/internal/kitchen/app/core"
 	"wheres-my-pizza/internal/xpkg/errors"
 	"wheres-my-pizza/internal/xpkg/logger"
 )
@@ -42,24 +45,24 @@ func main() {
 		help(fs)
 		return
 	}
-		// Remaining args after parsing --mode
-		remainingArgs := args[len(modeArgs):]
+	// Remaining args after parsing --mode
+	remainingArgs := args[len(modeArgs):]
 
-		ctx := context.Background()
-		switch *mode {
-		case "kitchen-worker", "kw":
-			l := mylogger.With("service", "kitchen-worker")
-	
-			l.Action("kitchen_service_started").Info("Successfully started")
-			if err := kitchen.Execute(ctx, l, remainingArgs); err != nil {
-				l.Action("kitchen_service_failed").Error("Error in kitchen-service", err)
-	
-				if !errors.Is(err, core.ErrHelp) {
-					log.Fatalf("failed to execute kitchen-service: %s", err)
-				}
+	ctx := context.Background()
+	switch *mode {
+	case "kitchen-worker", "kw":
+		l := logger.With("service", "kitchen-worker")
+
+		l.Action("kitchen_service_started").Info("Successfully started")
+		if err := kitchen.Execute(ctx, l, remainingArgs); err != nil {
+			l.Action("kitchen_service_failed").Error("Error in kitchen-service", err)
+
+			if !errors.Is(err, core.ErrHelp) {
+				log.Fatalf("failed to execute kitchen-service: %s", err)
 			}
-			l.Action("kitchen_service_completed").Info("Successfully completed")
-	
+		}
+		l.Action("kitchen_service_completed").Info("Successfully completed")
+	}
 }
 
 func help(fs *flag.FlagSet) {
