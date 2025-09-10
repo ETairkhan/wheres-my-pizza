@@ -59,7 +59,7 @@ func ConnectRabbitMQ(cfg *config.RabbitMQConfig, log *logger.Logger) (*RabbitMQ,
 		return nil, err
 	}
 
-	// Declare queues
+	// Declare main kitchen queue with DLX
 	_, err = channel.QueueDeclare(
 		"kitchen_queue", // name
 		true,            // durable
@@ -67,13 +67,65 @@ func ConnectRabbitMQ(cfg *config.RabbitMQConfig, log *logger.Logger) (*RabbitMQ,
 		false,           // exclusive
 		false,           // no-wait
 		amqp.Table{
-			"x-dead-letter-exchange": "dlx",
+			"x-dead-letter-exchange": "orders_topic_dlx",
 		}, // arguments
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	// Declare DLX exchange
+	err = channel.ExchangeDeclare(
+		"orders_topic_dlx", // name
+		"topic",            // type
+		true,               // durable
+		false,              // auto-deleted
+		false,              // internal
+		false,              // no-wait
+		nil,                // arguments
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Declare DLX queue
+	_, err = channel.QueueDeclare(
+		"kitchen_dlx_queue", // name
+		true,                // durable
+		false,               // delete when unused
+		false,               // exclusive
+		false,               // no-wait
+		nil,                 // arguments
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Bind DLX queue
+	err = channel.QueueBind(
+		"kitchen_dlx_queue", // queue name
+		"#",                 // routing key (all messages)
+		"orders_topic_dlx",  // exchange
+		false,               // no-wait
+		nil,                 // arguments
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Bind main kitchen queue to orders_topic exchange
+	err = channel.QueueBind(
+		"kitchen_queue", // queue name
+		"kitchen.*.*",   // routing key pattern
+		"orders_topic",  // exchange
+		false,           // no-wait
+		nil,             // arguments
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Declare and bind notifications queue
 	_, err = channel.QueueDeclare(
 		"notifications_queue", // name
 		true,                  // durable
@@ -81,18 +133,6 @@ func ConnectRabbitMQ(cfg *config.RabbitMQConfig, log *logger.Logger) (*RabbitMQ,
 		false,                 // exclusive
 		false,                 // no-wait
 		nil,                   // arguments
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Bind queues to exchanges
-	err = channel.QueueBind(
-		"kitchen_queue", // queue name
-		"kitchen.*",     // routing key
-		"orders_topic",  // exchange
-		false,           // no-wait
-		nil,             // arguments
 	)
 	if err != nil {
 		return nil, err
