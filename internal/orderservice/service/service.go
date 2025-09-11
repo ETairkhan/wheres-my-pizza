@@ -50,25 +50,33 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *models.CreateOrderR
 	// Generate order number
 	orderNumber, err := s.dbService.GenerateOrderNumber(ctx)
 	if err != nil {
-		return nil, err
+		s.logger.Error(requestID, "order_number_generation_failed", "Failed to generate order number", err)
+		return nil, fmt.Errorf("failed to generate order number: %w", err)
 	}
+
+	s.logger.Debug(requestID, "order_number_generated", fmt.Sprintf("Generated order number: %s", orderNumber))
 
 	// Create order in database
 	orderID, err := s.dbService.CreateOrder(ctx, req, orderNumber, totalAmount, priority)
 	if err != nil {
-		return nil, err
+		s.logger.Error(requestID, "order_creation_failed", "Failed to create order in database", err)
+		return nil, fmt.Errorf("failed to create order: %w", err)
 	}
+
+	s.logger.Debug(requestID, "order_created", fmt.Sprintf("Order created with ID: %d", orderID))
 
 	// Create order items
 	err = s.dbService.CreateOrderItems(ctx, orderID, req.Items)
 	if err != nil {
-		return nil, err
+		s.logger.Error(requestID, "order_items_creation_failed", "Failed to create order items", err)
+		return nil, fmt.Errorf("failed to create order items: %w", err)
 	}
 
 	// Log initial status
 	err = s.dbService.LogOrderStatus(ctx, orderID, "received", "order-service", "Order received")
 	if err != nil {
-		return nil, err
+		s.logger.Error(requestID, "status_logging_failed", "Failed to log order status", err)
+		return nil, fmt.Errorf("failed to log order status: %w", err)
 	}
 
 	// Publish message to RabbitMQ
@@ -86,7 +94,9 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *models.CreateOrderR
 	routingKey := fmt.Sprintf("kitchen.%s.%d", req.OrderType, priority)
 	err = s.msgService.PublishOrderMessage(&orderMessage, routingKey, uint8(priority))
 	if err != nil {
-		return nil, err
+		s.logger.Error(requestID, "message_publishing_failed", "Failed to publish message to RabbitMQ", err)
+		// Don't fail the order creation if messaging fails, just log it
+		s.logger.Debug(requestID, "order_created_but_message_failed", "Order created but failed to publish to RabbitMQ")
 	}
 
 	s.logger.Debug(requestID, "order_published", "Order published to RabbitMQ")

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
+	"strings"
 	"wheres-my-pizza/internal/orderservice/service"
 	"wheres-my-pizza/internal/orderservice/validation"
 	"wheres-my-pizza/pkg/logger"
@@ -66,7 +66,13 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	response, err := h.service.CreateOrder(r.Context(), &req, requestID)
 	if err != nil {
 		h.logger.Error(requestID, "order_processing_failed", "Failed to create order", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
+		// Check if it's a database constraint error
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
+			http.Error(w, "Order already exists", http.StatusConflict)
+		} else {
+			http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
