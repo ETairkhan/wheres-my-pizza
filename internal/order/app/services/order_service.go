@@ -6,24 +6,24 @@ import (
 	"fmt"
 	"strings"
 
-	"where-is-my-pizza/internal/mylogger"
-	"where-is-my-pizza/internal/order/app/core"
-	"where-is-my-pizza/internal/order/domain/dto"
-	"where-is-my-pizza/internal/order/domain/models"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/order/app/core"
+	"wheres-my-pizza/internal/order/domain/dto"
+	"wheres-my-pizza/internal/order/domain/models"
 )
 
 type OrderService struct {
 	ctx           context.Context
 	orderRepo     core.IOrderRepo
 	messageBroker core.IRabbitMQ
-	mylog         mylogger.Logger
+	mylog         logger.Logger
 }
 
 func NewOrderService(
 	ctx context.Context,
 	orderRepo core.IOrderRepo,
 	messageBroker core.IRabbitMQ,
-	mylogger mylogger.Logger,
+	mylogger logger.Logger,
 ) *OrderService {
 	return &OrderService{
 		ctx:           ctx,

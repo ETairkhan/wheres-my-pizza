@@ -8,10 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"where-is-my-pizza/internal/mylogger"
-	"where-is-my-pizza/internal/order/api/http"
-	"where-is-my-pizza/internal/order/app/core"
-	"where-is-my-pizza/internal/order/config"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/order/api/http"
+	"wheres-my-pizza/internal/order/app/core"
+	"wheres-my-pizza/internal/xpkg/config"
 )
 
 type params struct {
@@ -21,7 +21,7 @@ type params struct {
 }
 
 // Execute starts order service
-func Execute(ctx context.Context, mylog mylogger.Logger, args []string) error {
+func Execute(ctx context.Context, mylog logger.Logger, args []string) error {
 	newCtx, close := signal.NotifyContext(ctx, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 	defer close()
 

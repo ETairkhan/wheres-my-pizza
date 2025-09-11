@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sync"
 
-	"where-is-my-pizza/internal/mylogger"
-	"where-is-my-pizza/internal/order/app/core"
-	"where-is-my-pizza/internal/order/config"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/order/app/core"
+	"wheres-my-pizza/internal/xpkg/config"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -15,13 +15,13 @@ import (
 type DB struct {
 	ctx   context.Context
 	cfg   *config.Postgres
-	mylog mylogger.Logger
+	mylog logger.Logger
 	conn  *pgx.Conn
 	mu    *sync.Mutex
 }
 
 // Start initializes and returns a new DB instance with a single connection
-func Start(ctx context.Context, dbCfg *config.Postgres, mylog mylogger.Logger) (core.IDB, error) {
+func Start(ctx context.Context, dbCfg *config.Postgres, mylog logger.Logger) (core.IDB, error) {
 	d := &DB{
 		cfg:   dbCfg,
 		ctx:   ctx,

@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
-	"where-is-my-pizza/internal/mylogger"
-	"where-is-my-pizza/internal/order/api/http/handle"
-	"where-is-my-pizza/internal/order/app/core"
-	"where-is-my-pizza/internal/order/app/services"
-	"where-is-my-pizza/internal/order/config"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/order/api/http/handle"
+	"wheres-my-pizza/internal/order/app/core"
+	"wheres-my-pizza/internal/order/app/services"
+	"wheres-my-pizza/internal/xpkg/config"
 
-	brokermessage "where-is-my-pizza/internal/order/adapter/broker_message"
-	database "where-is-my-pizza/internal/order/adapter/db"
+	brokermessage "wheres-my-pizza/internal/order/adapter/broker_message"
+	database "wheres-my-pizza/internal/order/adapter/db"
 )
 
 var ErrServerClosed = errors.New("Server closed")
@@ -25,7 +25,7 @@ type Server struct {
 	cfg         *config.Config
 	srv         *http.Server
 	orderParams *core.OrderParams
-	mylog       mylogger.Logger
+	mylog       logger.Logger
 	db          core.IDB
 	mb          core.IRabbitMQ
 	ctx         context.Context
@@ -34,7 +34,7 @@ type Server struct {
 	wg          sync.WaitGroup
 }
 
-func NewServer(ctx, appCtx context.Context, cfg *config.Config, orderParams *core.OrderParams, mylog mylogger.Logger) *Server {
+func NewServer(ctx, appCtx context.Context, cfg *config.Config, orderParams *core.OrderParams, mylog logger.Logger) *Server {
 	return &Server{
 		ctx:         ctx,
 		appCtx:      appCtx,

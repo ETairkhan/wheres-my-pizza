@@ -3,7 +3,7 @@ package core
 import (
 	"context"
 
-	"where-is-my-pizza/internal/order/domain/dto"
+	"wheres-my-pizza/internal/order/domain/dto"
 )
 
 type IRabbitMQ interface {

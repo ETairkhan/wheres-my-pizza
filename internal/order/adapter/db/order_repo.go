@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"where-is-my-pizza/internal/order/app/core"
-	"where-is-my-pizza/internal/order/domain/dto"
-	"where-is-my-pizza/internal/order/domain/models"
+	"wheres-my-pizza/internal/order/app/core"
+	"wheres-my-pizza/internal/order/domain/dto"
+	"wheres-my-pizza/internal/order/domain/models"
 )
 
 type OrderRepo struct {

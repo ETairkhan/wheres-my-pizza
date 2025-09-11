@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"where-is-my-pizza/internal/mylogger"
-	"where-is-my-pizza/internal/order/app/core"
-	"where-is-my-pizza/internal/order/config"
-	"where-is-my-pizza/internal/order/domain/dto"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/order/app/core"
+	"wheres-my-pizza/internal/xpkg/config"
+	"wheres-my-pizza/internal/order/domain/dto"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -21,7 +21,7 @@ const exchange = "orders"
 type RabbitMQ struct {
 	ctx          context.Context
 	cfg          config.RabbitMQ
-	mylog        mylogger.Logger
+	mylog        logger.Logger
 	conn         *amqp.Connection
 	ch           *amqp.Channel
 	reconnecting bool
@@ -29,7 +29,7 @@ type RabbitMQ struct {
 }
 
 // create RabbitMQ adapter
-func New(ctx context.Context, rabbitmqCfg config.RabbitMQ, mylog mylogger.Logger) (core.IRabbitMQ, error) {
+func New(ctx context.Context, rabbitmqCfg config.RabbitMQ, mylog logger.Logger) (core.IRabbitMQ, error) {
 	r := &RabbitMQ{
 		ctx:          ctx,
 		cfg:          rabbitmqCfg,

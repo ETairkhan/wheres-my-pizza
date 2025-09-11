@@ -3,8 +3,8 @@ package core
 import (
 	"context"
 
-	"where-is-my-pizza/internal/order/domain/dto"
-	"where-is-my-pizza/internal/order/domain/models"
+	"wheres-my-pizza/internal/order/domain/dto"
+	"wheres-my-pizza/internal/order/domain/models"
 
 	"github.com/jackc/pgx/v5"
 )
