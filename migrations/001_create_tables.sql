@@ -36,12 +36,13 @@ CREATE TABLE IF NOT EXISTS order_status_log (
     notes TEXT
     );
 
--- Workers table (FIXED: removed order_types column as it's handled differently)
+-- Workers table
 CREATE TABLE IF NOT EXISTS workers (
                                        id SERIAL PRIMARY KEY,
                                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     name TEXT UNIQUE NOT NULL,
     type TEXT NOT NULL,
+    order_types TEXT,
     status TEXT DEFAULT 'online',
     last_seen TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     orders_processed INTEGER DEFAULT 0

@@ -35,3 +35,17 @@ Run each service in a separate terminal:
 
 # Notification Subscriber
 ./restaurant-system --mode=notification-subscriber
+
+
+create postgres db
+psql -U postgres -d restaurant_db
+
+GRANT USAGE, CREATE ON SCHEMA public TO restaurant_user;
+GRANT ALL PRIVILEGES ON DATABASE restaurant_db TO restaurant_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO restaurant_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO restaurant_user;
+
+\dp
+
+migration
+psql -h localhost -U restaurant_user -d restaurant_db -f migrations/001_create_tables.sql

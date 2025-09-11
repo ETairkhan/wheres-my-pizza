@@ -12,7 +12,7 @@ import (
 )
 
 func ConnectDB(cfg *config.DatabaseConfig, log *logger.Logger) (*pgxpool.Pool, error) {
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s",
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
 
 	poolConfig, err := pgxpool.ParseConfig(connStr)
