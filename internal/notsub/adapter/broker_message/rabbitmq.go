@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"where-is-my-pizza/internal/mylogger"
-	"where-is-my-pizza/internal/notsub/app/core"
-	"where-is-my-pizza/internal/notsub/config"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/notsub/app/core"
+	"wheres-my-pizza/internal/xpkg/config"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -20,7 +20,7 @@ type RabbitMQ struct {
 	cfg          *config.RabbitMQ
 	conn         *amqp.Connection
 	ch           *amqp.Channel
-	mylog        mylogger.Logger
+	mylog        logger.Logger
 	reconnecting bool
 	mu           *sync.Mutex
 
@@ -31,7 +31,7 @@ type RabbitMQ struct {
 func New(
 	ctx context.Context,
 	rabbitmqCfg *config.RabbitMQ,
-	mylog mylogger.Logger,
+	mylog logger.Logger,
 ) (core.IRabbitMQ, error) {
 	r := &RabbitMQ{
 		ctx:          ctx,

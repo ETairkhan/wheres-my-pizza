@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"sync"
 
-	"where-is-my-pizza/internal/mylogger"
-	"where-is-my-pizza/internal/notsub/app/core"
-	"where-is-my-pizza/internal/notsub/config"
-	"where-is-my-pizza/internal/notsub/domain/dto"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/notsub/app/core"
+	"wheres-my-pizza/internal/xpkg/config"
+	"wheres-my-pizza/internal/notsub/domain/dto"
 
-	brokermessage "where-is-my-pizza/internal/notsub/adapter/broker_message"
+	brokermessage "wheres-my-pizza/internal/notsub/adapter/broker_message"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -24,7 +24,7 @@ const (
 
 type Notification struct {
 	cfg    *config.Config
-	mylog  mylogger.Logger
+	mylog  logger.Logger
 	mb     core.IRabbitMQ
 	ctx    context.Context
 	appCtx context.Context
@@ -37,7 +37,7 @@ func NewNotification(
 	ctx context.Context,
 	appCtx context.Context,
 	cfg *config.Config,
-	mylog mylogger.Logger,
+	mylog logger.Logger,
 ) *Notification {
 	return &Notification{
 		ctx:    ctx,

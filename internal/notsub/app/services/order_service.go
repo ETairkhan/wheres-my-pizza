@@ -3,17 +3,17 @@ package services
 import (
 	"context"
 
-	"where-is-my-pizza/internal/mylogger"
+	"wheres-my-pizza/internal/xpkg/logger"
 )
 
 type OrderService struct {
 	ctx   context.Context
-	mylog mylogger.Logger
+	mylog logger.Logger
 }
 
 func NewOrderService(
 	ctx context.Context,
-	mylogger mylogger.Logger,
+	mylogger logger.Logger,
 ) *OrderService {
 	return &OrderService{
 		ctx:   ctx,
