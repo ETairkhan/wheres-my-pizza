@@ -49,3 +49,47 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO restaurant_user;
 
 migration
 psql -h localhost -U restaurant_user -d restaurant_db -f migrations/001_create_tables.sql
+
+```bash
+docker run --name postgresql \
+  -e POSTGRES_USER=restaurant_user \
+  -e POSTGRES_PASSWORD=restaurant_pass \
+  -e POSTGRES_DB=restaurant_db \
+  -p 5432:5432 \
+  -d postgres:15-alpine
+```
+```bash
+docker exec -it postgresql psql -U restaurant_user -d restaurant_db -c "
+CREATE USER restaurant_user WITH PASSWORD 'restaurant_password';
+GRANT ALL PRIVILEGES ON DATABASE restaurant_db TO restaurant_user;
+ALTER DATABASE restaurant_db OWNER TO restaurant_user;
+"
+```
+```bash
+docker exec -it postgresql psql -U restaurant_user -d restaurant_db -c "
+GRANT USAGE, CREATE ON SCHEMA public TO restaurant_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO restaurant_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO restaurant_user;
+"
+```
+
+```bash
+docker cp migrations/001_create_tables.sql postgresql:/tmp/001_create_tables.sql
+```
+
+```bash
+docker exec -it postgresql psql -U restaurant_user -d restaurant_db -f /tmp/001_create_tables.sql
+```
+
+```bash 
+
+docker run -d \
+  --name rabbitmq \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  -e RABBITMQ_DEFAULT_USER=guest \
+  -e RABBITMQ_DEFAULT_PASS=guest \
+  rabbitmq:3-management-alpine
+
+```
+
