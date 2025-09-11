@@ -3,8 +3,8 @@ package db
 import (
 	"context"
 
-	"where-is-my-pizza/internal/tracking/app/core"
-	"where-is-my-pizza/internal/tracking/domain/models"
+	"wheres-my-pizza/internal/tracking/app/core"
+	"wheres-my-pizza/internal/tracking/domain/models"
 
 	"github.com/jackc/pgx/v5"
 )

@@ -5,21 +5,21 @@ import (
 	"errors"
 	"fmt"
 
-	"where-is-my-pizza/internal/mylogger"
-	"where-is-my-pizza/internal/tracking/app/core"
-	"where-is-my-pizza/internal/tracking/domain/models"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/tracking/app/core"
+	"wheres-my-pizza/internal/tracking/domain/models"
 )
 
 type WorkerService struct {
 	ctx        context.Context
 	workerRepo core.IWorkerRepo
-	mylog      mylogger.Logger
+	mylog      logger.Logger
 }
 
 func NewWorkerService(
 	ctx context.Context,
 	workerRepo core.IWorkerRepo,
-	mylogger mylogger.Logger,
+	mylogger logger.Logger,
 ) *WorkerService {
 	return &WorkerService{
 		ctx:        ctx,

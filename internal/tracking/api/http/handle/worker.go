@@ -7,17 +7,17 @@ import (
 	"net/http"
 	"time"
 
-	"where-is-my-pizza/internal/mylogger"
-	"where-is-my-pizza/internal/tracking/app/core"
-	"where-is-my-pizza/internal/tracking/app/services"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/tracking/app/core"
+	"wheres-my-pizza/internal/tracking/app/services"
 )
 
 type WorkerHandler struct {
 	workerService *services.WorkerService
-	mylog         mylogger.Logger
+	mylog         logger.Logger
 }
 
-func NewWorkerHandler(workerService *services.WorkerService, mylog mylogger.Logger) *WorkerHandler {
+func NewWorkerHandler(workerService *services.WorkerService, mylog logger.Logger) *WorkerHandler {
 	return &WorkerHandler{
 		workerService: workerService,
 		mylog:         mylog,

@@ -3,7 +3,7 @@ package core
 import (
 	"context"
 
-	"where-is-my-pizza/internal/tracking/domain/models"
+	"wheres-my-pizza/internal/tracking/domain/models"
 
 	"github.com/jackc/pgx/v5"
 )

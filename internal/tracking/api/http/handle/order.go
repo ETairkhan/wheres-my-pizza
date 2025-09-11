@@ -7,17 +7,17 @@ import (
 	"net/http"
 	"time"
 
-	"where-is-my-pizza/internal/mylogger"
-	"where-is-my-pizza/internal/tracking/app/core"
-	"where-is-my-pizza/internal/tracking/app/services"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/tracking/app/core"
+	"wheres-my-pizza/internal/tracking/app/services"
 )
 
 type OrderHandler struct {
 	orderService *services.OrderService
-	mylog        mylogger.Logger
+	mylog        logger.Logger
 }
 
-func NewOrderHandler(orderService *services.OrderService, mylog mylogger.Logger) *OrderHandler {
+func NewOrderHandler(orderService *services.OrderService, mylog logger.Logger) *OrderHandler {
 	return &OrderHandler{
 		orderService: orderService,
 		mylog:        mylog,

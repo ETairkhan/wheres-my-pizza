@@ -8,13 +8,13 @@ import (
 	"sync"
 	"time"
 
-	"where-is-my-pizza/internal/mylogger"
-	"where-is-my-pizza/internal/tracking/api/http/handle"
-	"where-is-my-pizza/internal/tracking/app/core"
-	"where-is-my-pizza/internal/tracking/app/services"
-	"where-is-my-pizza/internal/tracking/config"
+	"wheres-my-pizza/internal/xpkg/logger"
+	"wheres-my-pizza/internal/tracking/api/http/handle"
+	"wheres-my-pizza/internal/tracking/app/core"
+	"wheres-my-pizza/internal/tracking/app/services"
+	"wheres-my-pizza/internal/xpkg/config"
 
-	database "where-is-my-pizza/internal/tracking/adapter/db"
+	database "wheres-my-pizza/internal/tracking/adapter/db"
 )
 
 var ErrServerClosed = errors.New("Server closed")
@@ -24,7 +24,7 @@ type Server struct {
 	cfg            *config.Config
 	srv            *http.Server
 	trackingParams *core.TrackingParams
-	mylog          mylogger.Logger
+	mylog          logger.Logger
 	db             core.IDB
 	ctx            context.Context
 	appCtx         context.Context
@@ -32,7 +32,7 @@ type Server struct {
 	wg             sync.WaitGroup
 }
 
-func NewServer(ctx, appCtx context.Context, cfg *config.Config, trackingParams *core.TrackingParams, mylog mylogger.Logger) *Server {
+func NewServer(ctx, appCtx context.Context, cfg *config.Config, trackingParams *core.TrackingParams, mylog logger.Logger) *Server {
 	return &Server{
 		ctx:            ctx,
 		appCtx:         appCtx,
