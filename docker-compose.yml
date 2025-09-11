@@ -24,8 +24,8 @@ services:
       - "${RABBITMQ_PORT:-5672}:5672"
       - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
     volumes:
-      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
-      - ./rabbitmq_definitions.json:/etc/rabbitmq/rabbitmq_definitions.json
+      - ./rabbitmq.conf:/home/student/wheres-my-pizza/rabbitmq.conf:ro
+      - ./rabbitmq_definitions.json:/home/student/wheres-my-pizza/rabbitmq_definition.json
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 5s

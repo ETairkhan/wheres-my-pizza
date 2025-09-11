@@ -1,0 +1,146 @@
+{
+    "users": [
+        {
+            "name": "michael",
+            "tags": "administrator",
+            "password": "afton"
+        }
+    ],
+    "vhosts": [
+        {
+            "name": "/"
+        },
+        {
+            "name": "fnaf"
+        }
+    ],
+    "permissions": [
+        {
+            "user": "michael",
+            "vhost": "fnaf",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        }
+    ],
+    "exchanges": [
+        {
+            "name": "orders",
+            "vhost": "fnaf",
+            "type": "topic",
+            "durable": true,
+            "auto_delete": false,
+            "internal": false,
+            "arguments": {}
+        },
+        {
+            "name": "notifications",
+            "vhost": "fnaf",
+            "type": "fanout",
+            "durable": true,
+            "auto_delete": false,
+            "internal": false,
+            "arguments": {}
+        },
+        {
+            "name": "dlx",
+            "vhost": "fnaf",
+            "type": "direct",
+            "durable": true,
+            "auto_delete": false,
+            "internal": false,
+            "arguments": {}
+        }
+    ],
+    "queues": [
+        {
+            "name": "dine_in",
+            "vhost": "fnaf",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {
+                "x-dead-letter-exchange": "dlx",
+                "x-dead-letter-routing-key": "dead_messages",
+                "x-max-priority": 10
+            }
+        },
+        {
+            "name": "delivery",
+            "vhost": "fnaf",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {
+                "x-dead-letter-exchange": "dlx",
+                "x-dead-letter-routing-key": "dead_messages",
+                "x-max-priority": 10
+            }
+        },
+        {
+            "name": "takeout",
+            "vhost": "fnaf",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {
+                "x-dead-letter-exchange": "dlx",
+                "x-dead-letter-routing-key": "dead_messages",
+                "x-max-priority": 10
+            }
+        },
+        {
+            "name": "dead_children",
+            "vhost": "fnaf",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {}
+        },
+        {
+            "name": "order_update",
+            "vhost": "fnaf",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {}
+        }
+    ],
+    "bindings": [
+        {
+            "source": "orders",
+            "vhost": "fnaf",
+            "destination": "dine_in",
+            "destination_type": "queue",
+            "routing_key": "kitchen.dine_in.*",
+            "arguments": {}
+        },
+        {
+            "source": "orders",
+            "vhost": "fnaf",
+            "destination": "delivery",
+            "destination_type": "queue",
+            "routing_key": "kitchen.delivery.*",
+            "arguments": {}
+        },
+        {
+            "source": "orders",
+            "vhost": "fnaf",
+            "destination": "takeout",
+            "destination_type": "queue",
+            "routing_key": "kitchen.takeout.*",
+            "arguments": {}
+        },
+        {
+            "source": "dlx",
+            "vhost": "fnaf",
+            "destination": "dead_children",
+            "destination_type": "queue",
+            "routing_key": "dead_messages",
+            "arguments": {}
+        },
+        {
+            "source": "notifications",
+            "vhost": "fnaf",
+            "destination": "order_update",
+            "destination_type": "queue",
+            "routing_key": "order_update_messages",
+            "arguments": {}
+        }
+    ]
+}

@@ -36,7 +36,12 @@ func LoadConfig(configPath string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	cnf := &Config{}
+	// Initialize the Config with empty structs
+	cnf := &Config{
+		DB:  &Postgres{},
+		RMQ: &RabbitMQ{},
+	}
+	
 	err = simpleYAMLUnmarshal(data, cnf)
 	if err != nil {
 		return nil, err
