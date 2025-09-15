@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"time"
-
 	"wheres-my-pizza/pkg/logger"
 	"wheres-my-pizza/pkg/models"
 
@@ -25,37 +24,36 @@ func NewOrderDB(dbPool *pgxpool.Pool, logger *logger.Logger) *OrderDB {
 }
 
 func (d *OrderDB) GenerateOrderNumber(ctx context.Context) (string, error) {
-    today := time.Now().UTC().Format("20060102")
-    sequenceName := "order_number_seq_" + today
-    
-    // Get the next sequence value for today
-    var seq int
-    err := d.dbPool.QueryRow(ctx, `
+	today := time.Now().UTC().Format("20060102")
+	sequenceName := "order_number_seq_" + today
+
+	// Get the next sequence value for today
+	var seq int
+	err := d.dbPool.QueryRow(ctx, `
         SELECT nextval($1)
     `, sequenceName).Scan(&seq)
-    
-    if err != nil {
-        // Sequence might not exist for today, create it
-        // Note: We can't use parameters for sequence names in DDL, so we use string formatting
-        // This is safe because 'today' is generated from time.Now() and not user input
-        _, createErr := d.dbPool.Exec(ctx, fmt.Sprintf(`
+	if err != nil {
+		// Sequence might not exist for today, create it
+		// Note: We can't use parameters for sequence names in DDL, so we use string formatting
+		// This is safe because 'today' is generated from time.Now() and not user input
+		_, createErr := d.dbPool.Exec(ctx, fmt.Sprintf(`
             CREATE SEQUENCE IF NOT EXISTS %s START 1
         `, sequenceName))
-        if createErr != nil {
-            return "", createErr
-        }
-        
-        // Try again
-        err = d.dbPool.QueryRow(ctx, `
+		if createErr != nil {
+			return "", createErr
+		}
+
+		// Try again
+		err = d.dbPool.QueryRow(ctx, `
             SELECT nextval($1)
         `, sequenceName).Scan(&seq)
-        if err != nil {
-            return "", err
-        }
-    }
-    
-    orderNumber := fmt.Sprintf("ORD_%s_%03d", today, seq)
-    return orderNumber, nil
+		if err != nil {
+			return "", err
+		}
+	}
+
+	orderNumber := fmt.Sprintf("ORD_%s_%03d", today, seq)
+	return orderNumber, nil
 }
 
 func (d *OrderDB) CreateOrder(ctx context.Context, req *models.CreateOrderRequest, orderNumber string, totalAmount float64, priority int) (int64, error) {
@@ -66,7 +64,6 @@ func (d *OrderDB) CreateOrder(ctx context.Context, req *models.CreateOrderReques
         VALUES ($1, $2, $3, $4, $5, $6, $7, 'received')
         RETURNING id
     `, orderNumber, req.CustomerName, req.OrderType, req.TableNumber, req.DeliveryAddress, totalAmount, priority).Scan(&orderID)
-
 	if err != nil {
 		return 0, err
 	}

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
 	"wheres-my-pizza/internal/trackingservice/service"
 	"wheres-my-pizza/pkg/logger"
 

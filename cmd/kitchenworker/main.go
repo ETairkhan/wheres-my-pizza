@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-
 	"wheres-my-pizza/internal/kitchenworker/worker"
 	"wheres-my-pizza/pkg/config"
 	"wheres-my-pizza/pkg/logger"

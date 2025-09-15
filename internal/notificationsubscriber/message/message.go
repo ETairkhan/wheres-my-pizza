@@ -2,7 +2,6 @@ package message
 
 import (
 	"encoding/json"
-
 	"wheres-my-pizza/pkg/logger"
 	"wheres-my-pizza/pkg/models"
 )

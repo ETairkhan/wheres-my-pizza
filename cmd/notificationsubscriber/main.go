@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
 	"wheres-my-pizza/internal/notificationsubscriber/subscriber"
 	"wheres-my-pizza/pkg/config"
 	"wheres-my-pizza/pkg/logger"

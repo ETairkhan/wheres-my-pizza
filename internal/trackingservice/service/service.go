@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"time"
-
 	"wheres-my-pizza/internal/trackingservice/db"
 	"wheres-my-pizza/pkg/logger"
 	"wheres-my-pizza/pkg/models"

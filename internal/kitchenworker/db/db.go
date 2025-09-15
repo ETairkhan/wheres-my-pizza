@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"strings"
-
 	"wheres-my-pizza/pkg/logger"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -67,7 +66,6 @@ func (d *KitchenDB) GetWorkerOrderTypes(ctx context.Context, workerName string) 
 	err := d.DbPool.QueryRow(ctx, `
 		SELECT order_types FROM workers WHERE name = $1
 	`, workerName).Scan(&orderTypesStr)
-
 	if err != nil {
 		return nil, err
 	}

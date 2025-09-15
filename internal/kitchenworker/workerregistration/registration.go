@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
 	"wheres-my-pizza/internal/kitchenworker/db"
 	"wheres-my-pizza/pkg/logger"
 )
@@ -77,7 +76,6 @@ func (r *WorkerRegistration) SendHeartbeat(workerName string) error {
 		SET last_seen = NOW() 
 		WHERE name = $1
 	`, workerName)
-
 	if err != nil {
 		return fmt.Errorf("failed to send heartbeat: %w", err)
 	}
@@ -94,7 +92,6 @@ func (r *WorkerRegistration) MarkWorkerOffline(workerName string) error {
 		SET status = 'offline', last_seen = NOW() 
 		WHERE name = $1
 	`, workerName)
-
 	if err != nil {
 		return fmt.Errorf("failed to mark worker offline: %w", err)
 	}
@@ -112,7 +109,6 @@ func (r *WorkerRegistration) GetWorkerOrderTypes(workerName string) ([]string, e
 	err := r.dbService.DbPool.QueryRow(ctx, `
 		SELECT order_types FROM workers WHERE name = $1
 	`, workerName).Scan(&orderTypesStr)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get worker order types: %w", err)
 	}
@@ -133,7 +129,6 @@ func (r *WorkerRegistration) IncrementOrdersProcessed(workerName string) error {
 		SET orders_processed = orders_processed + 1, last_seen = NOW() 
 		WHERE name = $1
 	`, workerName)
-
 	if err != nil {
 		return fmt.Errorf("failed to increment orders processed: %w", err)
 	}

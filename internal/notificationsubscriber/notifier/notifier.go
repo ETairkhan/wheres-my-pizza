@@ -3,7 +3,6 @@ package notifier
 import (
 	"fmt"
 	"time"
-
 	"wheres-my-pizza/pkg/logger"
 	"wheres-my-pizza/pkg/models"
 )

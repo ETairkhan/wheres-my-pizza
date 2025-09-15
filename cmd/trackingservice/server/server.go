@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
 	"wheres-my-pizza/internal/trackingservice/handler"
 	"wheres-my-pizza/pkg/config"
 	"wheres-my-pizza/pkg/db"

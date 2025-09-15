@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-
 	"wheres-my-pizza/pkg/logger"
 	"wheres-my-pizza/pkg/models"
 	"wheres-my-pizza/pkg/rabbitmq"

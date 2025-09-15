@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"time"
-
 	"wheres-my-pizza/pkg/config"
 	"wheres-my-pizza/pkg/logger"
 

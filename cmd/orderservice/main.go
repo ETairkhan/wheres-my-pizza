@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
 	"wheres-my-pizza/cmd/orderservice/server"
 	"wheres-my-pizza/pkg/config"
 	"wheres-my-pizza/pkg/logger"
