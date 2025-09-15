@@ -7,6 +7,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
       - POSTGRES_DB=${POSTGRES_DB:-restaurant_db}
+    volumes:
+      - ./migrations/001_create_tables.up.sql:/docker-entrypoint-initdb.d/001_create_tables.up.sql
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck: 
@@ -41,7 +43,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./migrations/:/migrations
+      - ./migrations/001_create_tables.up.sql:/docker-entrypoint-initdb.d/001_create_tables.up.sql
     command: [
       "-path", "/migrations/",
       "-database",
